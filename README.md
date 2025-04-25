@@ -45,8 +45,7 @@ This is an AI-powered legal assistant chatbot built using **LangChain**, **Grok 
 ## 📦 Installation
 
 ```bash
-git clone 
-
+git clone "https://github.com/Haseeb1511/AI_lawyer_chatbot.git"
 python -m venv venv
 source venv/bin/activate   # or venv\Scripts\activate on Windows
 pip install -r requirements.txt
