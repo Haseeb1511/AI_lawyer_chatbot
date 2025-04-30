@@ -15,6 +15,13 @@ This is an AI-powered legal assistant chatbot built using **LangChain**, **Grok 
 - 📄 **PDF Support** – Upload and process legal documents
 
 ---
+## 📚 Included Legal Documents
+
+1. **Code of Criminal Procedure (Act V of 1898)**  
+2. **The Constitution of the Islamic Republic of Pakistan**  
+3. **Pakistan Penal Code (Act XLV of 1860)**  
+4. **A Guide on Land and Property Rights in Pakistan**  
+5. **The Pakistan Criminal Law Amendment Act, 1958 (XL of 1958)**
 
 ## 🛠️ Tech Stack
 
