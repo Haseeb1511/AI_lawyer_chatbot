@@ -5,16 +5,13 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from dotenv import load_dotenv
 load_dotenv("../.env")  
 
-#Step 1: Document Loading
-# path = "pdf_files/"
-# def upload_pdf(file):
-#     with open(path+file.name,"wb") as f:
-#         f.write(file.getbuffer())
 
+path = "pdf_files/"
 def loader(path):
     loader = DirectoryLoader(path=path, glob="*.pdf",loader_cls=PyPDFLoader)
     load = loader.load()
     return load
+
 loaded_pdf_file = loader(path)
 print("Length of pdf: ",len(loaded_pdf_file))
 
@@ -30,9 +27,7 @@ print("Total Chunks:",len(chunks))
 
 
 #Step 3: Vector
-
 model = "sentence-transformers/all-MiniLM-L6-v2"
-# model = "deepseek-r1:1.5b"
 def get_embedding(model):
     return HuggingFaceEmbeddings(model_name=model)
 embedding = get_embedding(model)
