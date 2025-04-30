@@ -19,18 +19,33 @@ retriever = vector_store.as_retriever(type="similarity seacrh", search_kwargs={"
 
 
 template = PromptTemplate(
-            template="""You are a highly accurate assistant.
-                Use ONLY the given context to answer the user's question.
-                If the context does not contain the information needed, simply reply:
-                "I don't know based on the given context."
-                CONTEXT:
-                {context}
-                QUESTION:
-                {question}
-                Your Answer:
-                Your Answer (with citations like [1], [2]):
-                """,
-        input_variables=["context", "question"])
+    template=""" 
+        You are a Legal Assistant specialized in Pakistani law. 
+        Your task is to provide precise and legally accurate answers based on the provided context. Use the following documents:
+        - The Constitution of Pakistan
+        - The Pakistan Penal Code
+        - The Code of Criminal Procedure
+        - Land and Property Laws
+        - Criminal Law Amendments
+
+        Instructions:
+        - Refer ONLY to the provided context to answer the user's legal question.
+        - If the context lacks information to answer, respond with:
+        "I don't know based on the given context."
+        - Maintain a formal and professional tone at all times.
+        - Provide relevant citations from the documents, using brackets like [1], [2], etc.
+        
+        CONTEXT:
+        {context}
+
+        QUESTION:
+        {question}
+
+        ANSWER:
+        """,
+    input_variables=["context", "question"]
+)
+
 
 chain = RetrievalQA.from_chain_type(
         llm=llm,
