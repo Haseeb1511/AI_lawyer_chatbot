@@ -1,99 +1,86 @@
 import streamlit as st
-from langchain_core.prompts import PromptTemplate
-from langchain.chains import RetrievalQA
 from langchain_groq import ChatGroq
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
+from langchain.retrievers.document_compressors import CrossEncoderReranker
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import DocumentCompressorPipeline
+from langchain_community.cross_encoders import HuggingFaceCrossEncoder
+from langchain_core.runnables import RunnableParallel,RunnablePassthrough,RunnableLambda
 from dotenv import load_dotenv
-import re
+from langchain_core.output_parsers import StrOutputParser
+from src.prompt_parser import prompt
 load_dotenv()
 
-
-st.set_page_config(page_title="Legal Assistant Pakistan",layout="wide")
 st.title("⚖️ Legal Assistant Pakistan")
+st.image(image="Images/14th-July-Supreme-Court-final-640x360.png")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
-
-
-if "messages" not in st.session_state or len(st.session_state.messages) == 0:
-    st.markdown("""
-    #### 📄 Legal Documents Included in This Assistant:
-    Below is the list of legal references used to provide accurate and context-aware responses:
-    1. **Code of Criminal Procedure (Act V of 1898)**  
-    Covers the procedural aspects of criminal law in Pakistan.
-    2. **The Constitution of the Islamic Republic of Pakistan**  
-    The supreme law of Pakistan outlining fundamental rights, governance structure, and legal framework.
-    3. **Pakistan Penal Code (Act XLV of 1860)**  
-    Defines criminal offenses and prescribes punishments applicable throughout Pakistan.
-    4. **A Guide on Land and Property Rights in Pakistan**  
-    Practical guide to understanding land ownership, tenancy, and property laws in Pakistan.
-    5. **The Pakistan Criminal Law Amendment Act, 1958 (XL of 1958)**  
-    Amendments to criminal law aimed at enhancing legal procedures and accountability.
-    """)
-
-
 for message in st.session_state.messages:
     st.chat_message(message["role"]).markdown(message["content"])
 
+embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2", model_kwargs={"device": "cpu"})
+def load_vector_store(path,_embedding_model):
+    return FAISS.load_local(folder_path=path,embeddings=_embedding_model,allow_dangerous_deserialization=True)
+with st.spinner("Loading vector store"):
+    path_to_islamic_db = "vector_store/Islamic/"
+    path_to_cases_db = "vector_store/Cases/"
+    path_to_legal_db = "vector_store/Legal/"
 
+#------------------------------------------Vectors_store------------------------------------------------
+    cases_vector_store= load_vector_store(path_to_cases_db,embedding_model)
+    legal_vector_store= load_vector_store(path_to_legal_db,embedding_model)
+    islamic_vector_store= load_vector_store(path_to_islamic_db,embedding_model)
 
-llm = ChatGroq(model="deepseek-r1-distill-llama-70b",max_tokens=512)
-model = "sentence-transformers/all-MiniLM-L6-v2"
+#-----------------------------------------Retrievers------------------------------------------------------    
+cases_retriever = cases_vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 3})
+legal_retriever = legal_vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 3})
+islamic_retriever = islamic_vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 3})
 
-def get_embedding(model):
-    return HuggingFaceEmbeddings(model_name=model)
-embedding = get_embedding(model)
+#-------------------------------------CrossEncoder-------------------------------------------------------
 
-path = "vector_store/faiss_db"
-vector_store = FAISS.load_local(path,embedding,allow_dangerous_deserialization=True)
-retriever = vector_store.as_retriever(type="similarity seacrh", search_kwargs={"k": 3})
+hugging_face_reranker = HuggingFaceCrossEncoder(model_name = "cross-encoder/ms-marco-MiniLM-L6-v2")
+reranker = CrossEncoderReranker(model=hugging_face_reranker)
+pipeline = DocumentCompressorPipeline(transformers=[reranker])
 
-template = PromptTemplate(
-    template=""" 
-        You are a Legal Assistant specialized in Pakistani law. 
-        Your task is to provide precise and legally accurate answers based on the provided context. Use the following documents:
-        - The Constitution of Pakistan
-        - The Pakistan Penal Code
-        - The Code of Criminal Procedure
-        - Land and Property Laws
-        - Criminal Law Amendments
+#-----------------------------------------------------------------------------------------------------------
+def cleaner(docs):
+   return "\n\n".join(doc.page_content for doc in docs)
 
-        Instructions:
-        - Refer ONLY to the provided context to answer the user's legal question.
-        - If the context lacks information to answer, respond with:
-        "I don't know based on the given context."
-        - Maintain a formal and professional tone at all times.
-        - Provide relevant citations from the documents, using brackets like [1], [2], etc.
-        
-        CONTEXT:
-        {context}
+def main(query,retriever):
+    contextual_compression_retriever = ContextualCompressionRetriever(
+    base_compressor=pipeline,
+    base_retriever=retriever)
 
-        QUESTION:
-        {question}
+    template = prompt()
+    parser = StrOutputParser()
+    llm = ChatGroq(model="llama3-70b-8192",max_tokens=512)
 
-        ANSWER:
-        """,
-    input_variables=["context", "question"]
-)
-
-
-query = st.chat_input("Enter your legal query here:")
-if query:
     st.chat_message("user").markdown(query)
     st.session_state.messages.append({"role":"user","content":query})
 
-    chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        retriever=retriever,
-        chain_type_kwargs = {"prompt":template})
-    with st.spinner("Generating response....."):
-        result = chain.invoke({"query":query})
+    parallel_chain = RunnableParallel({
+    "context": contextual_compression_retriever | RunnableLambda(cleaner),
+    "question": RunnablePassthrough()})
 
-        # Remove everything inside <think>...</think>
-        response = re.sub(r"<think>.*?</think>", "", result["result"], flags=re.DOTALL).strip()
-        
+    final_chain = parallel_chain | template | llm | parser
+
+    with st.spinner("Generating response...."):
+        response = final_chain.invoke(query)
         st.chat_message("AI").markdown(response)
         st.session_state.messages.append({"role":"AI","content":response})
 
 
+st.sidebar.title("Query Selector")
+choice = st.sidebar.radio("Choose your Query Type:", ["Legal", "Cases", "Islamic Law"])
+query = st.chat_input("Enter your legal query here:")
+
+if query:
+    st.sidebar.write(f"You selected: {choice}")
+    if choice=="Legal":
+        main(query,legal_retriever)
+    elif choice=="Cases":
+        main(query,cases_retriever)
+    elif choice=="Islamic Law":
+        main(query,islamic_retriever)

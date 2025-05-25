@@ -1,76 +1,81 @@
 
-# 🧠 AI Lawyer Chatbot – RAG with LangChain + Groq + FAISS
+---
 
-This is an AI-powered legal assistant chatbot built using **LangChain**, **Grok (DeepSeek)** for inference, **FAISS** for vector storage, and **Sentence Transformers** for text embeddings. The chatbot uses Retrieval-Augmented Generation (RAG) to answer user queries based on uploaded legal PDFs.
+## ⚖️ Legal Assistant Pakistan 🇵🇰
+
+A Streamlit-based AI assistant designed to help users navigate Pakistan's legal system by retrieving relevant information from vector databases and generating accurate, context-aware responses using LLMs.
+
+![Legal Assistant Screenshot](Images/14th-July-Supreme-Court-final-640x360.png)
+
+---
+### Streamlit UI
+
+![APP](Images/3.png)
+
+### ChatBot Working
+![APP](Images/2.png)
+
+### 📌 Features
+
+* ✅ Multi-domain Legal Query Support (General Legal, Case Law, Islamic Law)
+* 🔍 Semantic search with [FAISS](https://github.com/facebookresearch/faiss)
+* 🧠 Embeddings via `sentence-transformers/all-MiniLM-L6-v2`
+* 📑 CrossEncoder reranking with `cross-encoder/ms-marco-MiniLM-L6-v2`
+* 🤖 Powered by `LLaMA3-70B` via [Groq's API](https://console.groq.com/)
+* 🧵 Conversational memory using `st.session_state`
+* 🧰 Modular prompt parsing via `prompt_parser.py`
 
 ---
 
-## 🚀 Features
+### 🗂 Directory Structure
 
-- ⚖️ **Legal Domain Focus** – Ask legal questions based on custom PDFs
-- 🔍 **RAG Pipeline** – Combines LLM reasoning with document retrieval
-- 🧠 **Grok/DeepSeek** – Fast and powerful inference using Groq API
-- 🧩 **Sentence Transformers** – Converts text chunks into vector embeddings
-- 🗂️ **FAISS Vector Store** – Efficient storage and retrieval of document chunks
-- 📄 **PDF Support** – Upload and process legal documents
-
----
-## 📚 Included Legal Documents
-
-1. **Code of Criminal Procedure (Act V of 1898)**  
-2. **The Constitution of the Islamic Republic of Pakistan**  
-3. **Pakistan Penal Code (Act XLV of 1860)**  
-4. **A Guide on Land and Property Rights in Pakistan**  
-5. **The Pakistan Criminal Law Amendment Act, 1958 (XL of 1958)**
-
-## 🛠️ Tech Stack
-
-| Component            | Library / Tool                          |
-|---------------------|------------------------------------------|
-| LLM Inference        | `groq` (DeepSeek model)                 |
-| Framework            | `LangChain`                             |
-| Embeddings           | `sentence-transformers` (`MiniLM`)      |
-| Vector Database      | `FAISS`                                 |
-| Document Loader      | `PyPDFLoader`, `DirectoryLoader`        |
-| Prompt Management    | `LangChain PromptTemplate`              |
-| Environment Config   | `python-dotenv`                         |
-| Language             | `Python 3.10+`                          |
+```plaintext
+├── app.py                         # Main Streamlit app
+├── Images/
+│   └── 14th-July-Supreme-Court-final-640x360.png
+├── vector_store/
+│   ├── Cases/                     # FAISS index for case law
+│   ├── Legal/                     # FAISS index for legal principles
+│   └── Islamic/                   # FAISS index for Islamic law
+├── src/
+│   └── prompt_parser.py          # Custom prompt template logic
+├── .env                          # Environment variables (Groq API key etc.)
+└── README.md
+```
 
 ---
 
-## ⚙️ How It Works
+### 🧪 Setup Instructions
 
-1. **PDF Upload** – Upload your legal PDF documents.
-2. **Text Chunking** – The text is split into manageable chunks using recursive character splitting.
-3. **Vectorization** – Chunks are converted into dense vector embeddings using Sentence Transformers.
-4. **Storage** – Embeddings are stored in a FAISS vector database.
-5. **RAG Querying** – User inputs are embedded and relevant chunks are retrieved.
-6. **LLM Inference** – The question and retrieved context are sent to Groq (DeepSeek) for response generation.
-
----
-
-## 📦 Installation
+#### 1. **Clone the repository**
 
 ```bash
-git clone "https://github.com/Haseeb1511/AI_lawyer_chatbot.git"
-python -m venv venv
-source venv/bin/activate   # or venv\Scripts\activate on Windows
+git clone https://github.com/Haseeb1511/AI_lawyer_chatbot.git
+cd legal-assistant-pakistan
+```
+
+#### 2. **Create and activate virtual environment**
+
+```bash
+python -m venv legal
+legal\Scripts\activate           # On Windows
+```
+
+#### 3. **Install dependencies**
+
+```bash
 pip install -r requirements.txt
 ```
 
----
 
-## 🔑 Environment Variables
 
-Create a `.env` file with your API keys:
+#### 4. **Set up your `.env`**
 
 ```env
-GROQ_API_KEY=your_groq_api_key
+GROQ_API_KEY=your_groq_api_key_here
 ```
 
----
-
-## ▶️ Run the App
+#### 5. **Run the app**
 
 ```bash
 streamlit run app.py
@@ -78,23 +83,27 @@ streamlit run app.py
 
 ---
 
-## 🧪 Example Query
+### ✨ How It Works
 
-> “Can you explain the clause related to breach of contract in this document?”
-
----
-
-## 📚 TODOs
-
-- [ ] Add support for follow-up questions (chat history)
-- [ ] Integrate multiple embedding models
-- [ ] Add citation references to sources
-- [ ] Dockerize the project
+1. **Embeddings & FAISS**: Vector databases for legal, case, and Islamic documents are loaded using HuggingFace sentence transformers.
+2. **Retrieval**: Similar documents are fetched using FAISS.
+3. **Reranking**: Results are reranked using `cross-encoder/ms-marco-MiniLM-L6-v2`.
+4. **Contextual Compression**: LangChain's `ContextualCompressionRetriever` keeps only the most relevant info.
+5. **LLM Response**: Query + reranked context is sent to `llama3-70b-8192` via Groq API.
+6. **Display**: Streamlit shows chat-style response and stores session history.
 
 ---
 
-## 📄 License
+### 🛠️ Customization
 
-This project is licensed under the [MIT License](LICENSE).
+* **Prompt customization**: Modify `src/prompt_parser.py`
+* **LLM model**: Change in `ChatGroq(model="llama3-70b-8192")`
+* **Retriever settings**: Modify `search_kwargs={"k": 3}` to fetch more/less docs.
+
+---
+
+### 🧾 License
+
+This project is licensed under the MIT License.
 
 ---
